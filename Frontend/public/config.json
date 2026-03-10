@@ -1,0 +1,6 @@
+{
+  "tank_capacity": 460,
+  "genset_cost": 25,
+  "solar_cost": 0.5,
+  "mains_cost": 17
+}

@@ -1,0 +1,423 @@
+/* App.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar using Tailwind's @layer */
+@layer base {
+  html {
+    overflow-y: auto;
+    scrollbar-width: thick; /* Firefox */
+    scrollbar-color: #0a3d38 #030f0e; /* Firefox */
+    background: #030f0e;
+  }
+
+  body {
+    @apply select-none;
+  }
+
+  body::-webkit-scrollbar {
+    width: 16px; /* Scrollbar width */
+  }
+
+  body::-webkit-scrollbar-track {
+    background: #030f0e; /* Track color */
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background-color: #0a3d38; /* Thumb color */
+    border-radius: 8px; /* Thumb border-radius */
+    border: 2px solid #030f0e; /* Optional space around the thumb */
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: #0a3d38; /* Hover color */
+  }
+}
+
+.custom-body {
+  @apply font-poppins scroll-smooth min-h-screen;
+  /* Ensures full screen height */
+  background: linear-gradient(to right, #031816, #030f0e);
+  /* Gradient background */
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* Ensures full coverage of the screen */
+  width: 100%;
+  /* Full width */
+  height: 100vh;
+  scrollbar-width: thin; /* Use 'thin' or 'auto' */
+  scrollbar-color: #0a3d38 #0f544c; /* thumb color and track color */
+}
+
+.custom-body::-webkit-scrollbar {
+  width: 12px; /* Width of the scrollbar */
+}
+
+.custom-body::-webkit-scrollbar-track {
+  background: #0f544c; /* Background of the scrollbar track */
+  border-radius: 10px; /* Round track corners */
+}
+
+.custom-body::-webkit-scrollbar-thumb {
+  background: #0a3d38; /* Color of the scrollbar thumb */
+  border-radius: 10px; /* Round thumb corners */
+}
+
+.custom-body::-webkit-scrollbar-thumb:hover {
+  background: #68bfb6; /* Color of the thumb on hover */
+}
+
+body {
+  @apply font-poppins;
+  /* Apply the Poppins font globally */
+}
+
+.tooltip {
+  @apply absolute bg-white border border-gray-300 rounded-md p-2 text-xs opacity-0 pointer-events-none transition-opacity duration-300;
+}
+
+/* Custom scrollbar */
+.scrollbar-custom {
+  scrollbar-width: thin;
+  scrollbar-color: #0a3d38 #0f544c;
+}
+
+/* For WebKit browsers (Chrome, Safari) */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: #0a3d38;
+  border-radius: 8px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background-color: #0f544c;
+}
+
+.severity-alert::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #57eb66;
+  margin-right: 8px;
+}
+
+.severity-shutdown::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #eb5757;
+  margin-right: 8px;
+}
+
+.gauge-wrapper {
+  display: inline-block;
+  width: auto;
+  margin: 0 auto;
+  padding: 15px 15px 15px;
+  position: relative;
+}
+
+.gauge {
+  background: #e7e7e7;
+  box-shadow: 0 -3px 6px 2px rgba(0, 0, 0, 0.5);
+  width: 10vw;
+  height: 6vw;
+  border-radius: 100px 100px 0 0 !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.gauge.min-scaled {
+  transform: scale(0.5);
+}
+
+.gauge-center {
+  content: "";
+  width: 60%;
+  height: 60%;
+  background: white;
+  border-radius: 100px 100px 0 0 !important;
+  position: absolute;
+  box-shadow: 0 -8px 10px -7px rgba(0, 0, 0, 0.38);
+  right: 21%;
+  bottom: 0;
+  z-index: 10;
+}
+
+.gauge-center .label,
+.gauge-center .number {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.gauge-center .label {
+  font-size: 0.75em;
+  opacity: 0.6;
+  margin: 1.1em 0 0.3em 0;
+}
+
+.gauge-center .number {
+  font-size: 1.2em;
+}
+
+.needle {
+  width: 75%; /* Adjust this to control how far the needle extends */
+  height: 0.26vw; /* Keep the height responsive */
+  background: #cacccc;
+  border-bottom-left-radius: 100% !important;
+  border-bottom-right-radius: 5px !important;
+  border-top-left-radius: 100% !important;
+  border-top-right-radius: 5px !important;
+  position: absolute;
+  left: -20%; /* Center horizontally */
+  bottom: 0; /* Align to the bottom */
+  transform: translateX(-50%) rotate(0deg); /* Centering with translateX */
+  transform-origin: 100% 0.1vw; /* Ensure proper rotation point */
+  box-shadow: 0 0.05vw 0.05vw 0.05vw rgba(0, 0, 0, 0.38); /* Responsive shadow */
+  display: block; /* Ensure it's displayed */
+  z-index: 9;
+}
+.four.rischio1 .needle {
+  animation: fourspeed1 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio11 .needle {
+  animation: fourspeed11 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio2 .needle {
+  animation: fourspeed2 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio22 .needle {
+  animation: fourspeed22 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio3 .needle {
+  animation: fourspeed3 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio33 .needle {
+  animation: fourspeed33 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio4 .needle {
+  animation: fourspeed4 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.four.rischio44 .needle {
+  animation: fourspeed44 2s 1 both;
+  animation-delay: 1s;
+  display: block;
+}
+
+.slice-colors {
+  height: 100%;
+}
+
+.slice-colors .st {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border: 2.5vw solid transparent;
+}
+
+.four .slice-colors .st.slice-item:nth-child(2) {
+  border-top: 3.6vw #fd9c2b solid; /* 37.5px converted to vw */
+  border-right: 8vw #fd9c2b solid;
+  background-color: #eb5757;
+}
+
+.four .slice-colors .st.slice-item:nth-child(4) {
+  left: 50%; /* This percentage is already responsive, no need to change */
+  border-bottom: 2.5vw #57eb66 solid; /* 37.5px converted to vw */
+  border-right: 3.2vw #57eb66 solid;
+  background-color: #fd9c2b;
+}
+
+.color-label {
+  position: absolute;
+  font-size: 0.8em;
+  color: #fff;
+  text-align: center;
+  z-index: 10;
+}
+
+.low {
+  top: 70%;
+  left: 12%;
+  transform: translate(-50%, -50%);
+  color: black;
+  font-size: 1.3vh;
+  font-weight: 600;
+}
+
+.high {
+  top: 70%;
+  right: 12%;
+  transform: translate(50%, -50%);
+  color: black;
+  font-size: 1.3vh;
+  font-weight: 600;
+}
+
+.medium {
+  bottom: 75%;
+  left: 49%;
+  transform: translate(-50%, 50%);
+  color: black;
+  font-size: 1.3vh;
+  font-weight: 600;
+}
+
+@keyframes fourspeed1 {
+  0% {
+    transform: rotate(0deg); /* Start */
+  }
+  100% {
+    transform: rotate(45deg); /* End of rischio1 (0-25) */
+  }
+}
+
+@keyframes fourspeed11 {
+  0% {
+    transform: rotate(0deg); /* Start */
+  }
+  100% {
+    transform: rotate(30deg); /* End of rischio1 (0-25) */
+  }
+}
+
+@keyframes fourspeed2 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio1 */
+  }
+  100% {
+    transform: rotate(90deg); /* End of rischio2 (26-50) */
+  }
+}
+
+@keyframes fourspeed22 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio1 */
+  }
+  100% {
+    transform: rotate(75deg); /* End of rischio2 (26-50) */
+  }
+}
+
+@keyframes fourspeed3 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio2 */
+  }
+  100% {
+    transform: rotate(135deg); /* End of rischio3 (51-75) */
+  }
+}
+
+@keyframes fourspeed33 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio2 */
+  }
+  100% {
+    transform: rotate(115deg); /* End of rischio3 (51-75) */
+  }
+}
+
+@keyframes fourspeed44 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio3 */
+  }
+  100% {
+    transform: rotate(160deg); /* End of rischio4 (76-100) */
+  }
+}
+
+@keyframes fourspeed4 {
+  0% {
+    transform: rotate(0deg); /* Start at the end of rischio3 */
+  }
+  100% {
+    transform: rotate(180deg); /* End of rischio4 (76-100) */
+  }
+}
+
+/* Label positioning */
+.label-text {
+  position: absolute;
+  font-size: 0.8em;
+  color: #fff;
+  transform-origin: center;
+}
+
+.label-0 {
+  top: 80%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+}
+
+.label-25 {
+  top: 30%;
+  transform: translate(-50%, -50%);
+}
+
+.label-50 {
+  top: 4%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.label-75 {
+  top: 30%;
+  right: 0%;
+  transform: translate(-50%, -50%);
+}
+
+.label-100 {
+  top: 80%;
+  right: 0;
+  transform: translate(50%, -50%);
+}
+
+.progress-4 {
+  width: 300px;
+  height: 30px;
+  -webkit-mask: linear-gradient(90deg, #0d6ed9 50%, #00000000 0) 0/10%;
+  background: linear-gradient(#0d6ed9 0 0) 0/0% no-repeat #ddd;
+  animation: p4 5s infinite steps(10);
+}
+
+@keyframes p4 {
+  100% {
+    background-size: 120%;
+  }
+}
+
+/* Reset box-sizing and other styles */
+* {
+  box-sizing: border-box;
+}
