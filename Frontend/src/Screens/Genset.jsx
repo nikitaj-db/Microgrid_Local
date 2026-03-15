@@ -3,9 +3,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import ProgressBar from "../Components/ProgressBar";
 import * as d3 from "d3";
+import KeyValueTable from "../Components/KeyValueTable";
+import MetricLineChart from "../Components/MetricLineChart";
+import { demoGensetLive, makeHourlySeries } from "../utils/demoData";
 
 const Genset = ({ BaseUrl }) => {
-  const [data, setData] = useState({});
+  const [data, setData] = useState({ genset: {} });
   const [alertsData, setAlertsData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
   const [shutdownCount, setShutdownCount] = useState(0);
@@ -27,12 +30,13 @@ const Genset = ({ BaseUrl }) => {
 
     const fetchPowerData = async () => {
       try {
-        const response = await fetch(`${BaseUrl}/genset/excel`);
+        const response = await fetch(`${BaseUrl}/live/genset/excel`);
         const result = await response.json();
         //  console.log(result)
-        setChartData(result);
+        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 4, baseKwh: 300, baseKwTotal: 18 }));
       } catch (error) {
         console.error("Error fetching power data:", error);
+        setChartData(makeHourlySeries({ baseUnit: 4, baseKwh: 300, baseKwTotal: 18 }));
       }
     };
 
@@ -58,17 +62,18 @@ const Genset = ({ BaseUrl }) => {
 
   const fetchGenset = async () => {
     try {
-      const response = await fetch(`${BaseUrl}/genset`);
+      const response = await fetch(`${BaseUrl}/live/genset`);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const data = await response.json();
-      const sortedData = data.sort((a, b) => a.id - b.id);
-      // console.log(sortedData)
-      setData(sortedData[sortedData.length - 1]);
+      const payload = await response.json();
+      const latest = payload?.genset || {};
+      const hasAny = latest && typeof latest === "object" && Object.keys(latest).length > 0;
+      setData({ genset: hasAny ? latest : demoGensetLive });
       setLoading(false);
     } catch (error) {
       console.error("Fetch Error:", error);
+      setData({ genset: demoGensetLive });
       setLoading(false);
     }
     try {
@@ -391,8 +396,10 @@ const Genset = ({ BaseUrl }) => {
     };
   };
 
-  const utilisation_factor = !loading && (data.operating_hours / 1000) * 100;
-  const operational = ((data.fuel_level / 100) * config.tank_capacity) / 55;
+  const utilisation_factor =
+    !loading && ((Number(data.genset?.operating_hours) || 0) / 1000) * 100;
+  const operational =
+    ((Number(data.genset?.fuel_level) || 0) / 100) * config.tank_capacity / 55;
   const formatNumber = (value, decimals = 2, fallback = 0) => {
     const num = Number(value);
     return isNaN(num) ? fallback : num.toFixed(decimals);
@@ -419,12 +426,12 @@ const Genset = ({ BaseUrl }) => {
             </div>
             <div className="absolute top-2 right-3 transform -translate-x-1/5 translate-y-1/5 p-1.5 bg-transparent text-white rounded z-10 flex items-center max-w-[calc(100%-40px)]">
               <div>
-                {data.voltagel_phase1 > 200 &&
-                data.voltagel_phase2 > 200 &&
-                data.voltagel_phase3 > 200 &&
-                data.kw_phase1 >= 1 &&
-                data.kw_phase2 >= 1 &&
-                data.kw_phase3 >= 1 ? (
+                {Number(data.genset?.voltagel_phase1) > 200 &&
+                Number(data.genset?.voltagel_phase2) > 200 &&
+                Number(data.genset?.voltagel_phase3) > 200 &&
+                Number(data.genset?.kw_phase1) >= 1 &&
+                Number(data.genset?.kw_phase2) >= 1 &&
+                Number(data.genset?.kw_phase3) >= 1 ? (
                   <div className="flex items-center gap-2">
                     <div className="bg-[#30F679] rounded-full w-4 h-4"></div>
                     <div className="text-[#30F679]">Active</div>
@@ -449,7 +456,7 @@ const Genset = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="operating-hours"
                 >
-                  {data.operating_hours} hrs
+                  {data.genset?.operating_hours} hrs
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -460,7 +467,7 @@ const Genset = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-generation"
                 >
-                  {data.kwh} kWh
+                  {data.genset?.kwh} kWh
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -471,7 +478,7 @@ const Genset = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-consumption"
                 >
-                  {data.kwh} kWh
+                  {data.genset?.kwh} kWh
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -482,7 +489,7 @@ const Genset = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-savings"
                 >
-                  INR {config.genset_cost * data.kwh}
+                  INR {Number(config.genset_cost || 0) * Number(data.genset?.kwh || 0)}
                 </p>
               </div>
             </div>
@@ -518,12 +525,12 @@ const Genset = ({ BaseUrl }) => {
                         Fuel Level
                       </h5>
                       <p className="text-white text-base flex font-semibold">
-                        {Number(data.fuel_level)} %
+                        {Number(data.genset?.fuel_level)} %
                       </p>
                     </div>
 
                     <div className="flex items-center justify-center">
-                      <ProgressBar fuellevel={Number(data.fuel_level)} />
+                      <ProgressBar fuellevel={Number(data.genset?.fuel_level)} />
                     </div>
 
                     <div className="xl:mt-4 p-2 bg-[#022F2A] w-full">
@@ -565,7 +572,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="coolant-temp"
                     >
-                      {data.coolant_temp}
+                      {data.genset?.coolant_temp}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -579,7 +586,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="power-generated-yesterday"
                     >
-                      {formatNumber(data.power_generated_yesterday)}
+                      {formatNumber(data.genset?.power_generated_yesterday)}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -595,7 +602,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="hours-operated"
                     >
-                      {data.hours_operated_yesterday}
+                      {data.genset?.hours_operated_yesterday}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -609,7 +616,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="battery-charged"
                     >
-                      {data.battery_charged}
+                      {data.genset?.battery_charged}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -625,7 +632,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="oil-pressure"
                     >
-                      {data.oil_pressure}
+                      {data.genset?.oil_pressure}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -655,7 +662,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="frequency"
                     >
-                      {data.frequency ? data.frequency : 0}
+                      {data.genset?.frequency ? data.genset?.frequency : 0}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -669,7 +676,7 @@ const Genset = ({ BaseUrl }) => {
                       className="text-[#F3E5DE] text-sm xl:text-base font-semibold"
                       id="battery-charged"
                     >
-                      {data.power_factor ? data.power_factor : 0}
+                      {data.genset?.power_factor ? data.genset?.power_factor : 0}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -705,19 +712,19 @@ const Genset = ({ BaseUrl }) => {
                         id="voltage-l-l-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase1}
+                        {data.genset?.voltagel_phase1}
                       </td>
                       <td
                         id="voltage-l-n-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase1}
+                        {data.genset?.voltagen_phase1}
                       </td>
                       <td
                         id="current-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.current_phase1}
+                        {data.genset?.current_phase1}
                       </td>
                     </tr>
                     <tr>
@@ -728,19 +735,19 @@ const Genset = ({ BaseUrl }) => {
                         id="voltage-l-l-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase2}
+                        {data.genset?.voltagel_phase2}
                       </td>
                       <td
                         id="voltage-l-n-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase2}
+                        {data.genset?.voltagen_phase2}
                       </td>
                       <td
                         id="current-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.current_phase2}
+                        {data.genset?.current_phase2}
                       </td>
                     </tr>
                     <tr>
@@ -751,19 +758,19 @@ const Genset = ({ BaseUrl }) => {
                         id="voltage-l-l-phase3"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase3}
+                        {data.genset?.voltagel_phase3}
                       </td>
                       <td
                         id="voltage-l-n-phase3"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase3}
+                        {data.genset?.voltagen_phase3}
                       </td>
                       <td
                         id="current-phase3"
                         className="text-center p-3 rounded-br-lg text-sm xl:text-base"
                       >
-                        {data.current_phase3}
+                        {data.genset?.current_phase3}
                       </td>
                     </tr>
                   </tbody>
@@ -914,23 +921,37 @@ const Genset = ({ BaseUrl }) => {
                     <tr className="text-sm xl:text-base">
                       <td className="p-4 rounded-bl-lg">kW</td>
                       <td id="kW-phase1" className="p-2">
-                        {data.kw_phase1}
+                        {data.genset?.kw_phase1}
                       </td>
                       <td id="kW-phase2" className="p-2">
-                        {data.kw_phase2}
+                        {data.genset?.kw_phase2}
                       </td>
                       <td id="kW-phase3" className="p-2 rounded-br-lg">
-                        {data.kw_phase3}
+                        {data.genset?.kw_phase3}
                       </td>
                     </tr>
                     {/* <tr className='text-sm xl:text-base'>
                                         <td className="p-3 rounded-bl-lg">kVA</td>
-                                        <td id="kVA-phase1" className="p-2">{data.kva_phase1}</td>
-                                        <td id="kVA-phase2" className="p-2">{data.kva_phase2}</td>
-                                        <td id="kVA-phase3" className="p-2 rounded-br-lg">{data.kva_phase3}</td>
+                                        <td id="kVA-phase1" className="p-2">{data.genset?.kva_phase1}</td>
+                                        <td id="kVA-phase2" className="p-2">{data.genset?.kva_phase2}</td>
+                                        <td id="kVA-phase3" className="p-2 rounded-br-lg">{data.genset?.kva_phase3}</td>
                                     </tr> */}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4 mb-7">
+                <KeyValueTable
+                  title="Genset (All Live Values)"
+                  data={data.genset}
+                  excludeKeys={[]}
+                />
+                <MetricLineChart
+                  title="Genset (Trends)"
+                  series={chartData}
+                  defaultMetric="unit_generation"
+                  xKey="hour"
+                />
               </div>
             </div>
           </div>

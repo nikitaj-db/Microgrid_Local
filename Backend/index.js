@@ -11,9 +11,10 @@ const mainsRoutes = require("./src/mains/mains_routes.js");
 const gensetRoutes = require("./src/genset/genset_routes.js");
 const recordsRoutes = require("./src/records/records_routes.js");
 const alertRoutes = require("./src/alert/alert_routes.js");
+const liveRoutes = require("./src/live/live_routes.js");
 
 const app = express();
-const PORT = 5002 || process.env.PORT;
+const PORT = process.env.PORT || 5002;
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -25,6 +26,7 @@ app.use("/micro/mains", mainsRoutes);
 app.use("/micro/genset", gensetRoutes);
 app.use("/micro/records", recordsRoutes);
 app.use("/micro/alert", alertRoutes);
+app.use("/micro/live", liveRoutes);
 
 // Periodic transfer function
 // setInterval(async () => {

@@ -9,6 +9,9 @@ import {
   calculateAverageVoltageL_L,
   calculateAverageVoltageL_N,
 } from "../Components/Calculation";
+import KeyValueTable from "../Components/KeyValueTable";
+import MetricLineChart from "../Components/MetricLineChart";
+import { demoOverview, makeHourlySeries } from "../utils/demoData";
 
 const Overview = ({ BaseUrl }) => {
   const myDatavizRef = useRef(null);
@@ -47,9 +50,10 @@ const Overview = ({ BaseUrl }) => {
         });
         const result = await response.json();
         // console.log(result)
-        setChartData(result);
+        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 8, baseKwh: 200, baseKwTotal: 22 }));
       } catch (error) {
         console.error("Error fetching power data:", error);
+        setChartData(makeHourlySeries({ baseUnit: 8, baseKwh: 200, baseKwTotal: 22 }));
       }
     };
 
@@ -78,12 +82,17 @@ const Overview = ({ BaseUrl }) => {
       .then((response) => response.json())
       .then((data) => {
         //   console.log(data)
-        setAllData(data);
-        setDataAverage(data.average);
+        const hasAny = data && typeof data === "object" && Object.keys(data).length > 0;
+        const next = hasAny ? data : demoOverview;
+        setAllData(next);
+        setDataAverage(next.average);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
+        setAllData(demoOverview);
+        setDataAverage(demoOverview.average);
+        setLoading(false);
       });
   };
 
@@ -1235,6 +1244,32 @@ const Overview = ({ BaseUrl }) => {
                 Avg. Voltage (L-N) (Volts)
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <MetricLineChart
+            title="Overview (Trends)"
+            series={chartData}
+            defaultMetric="unit_generation"
+            xKey="hour"
+          />
+          <div className="grid grid-cols-1 gap-4">
+            <KeyValueTable
+              title="Solar (All Values)"
+              data={alldata?.solar}
+              excludeKeys={[]}
+            />
+            <KeyValueTable
+              title="Genset (All Values)"
+              data={alldata?.genset}
+              excludeKeys={[]}
+            />
+            <KeyValueTable
+              title="Mains (All Values)"
+              data={alldata?.mains}
+              excludeKeys={[]}
+            />
           </div>
         </div>
       </div>

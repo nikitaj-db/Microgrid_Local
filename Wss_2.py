@@ -1,6 +1,27 @@
 import asyncio
 import websockets
 import json
+import urllib.request
+import urllib.error
+
+# Backend REST base URLs (Solar + Genset) - add your actual IP/port if different.
+BASEURL = "http://localhost:5002/micro/live"
+SOLAR_URL = f"{BASEURL}/solar"
+GENSET_URL = f"{BASEURL}/genset"
+
+def post_json(url, payload):
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.status
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        return None
 
 async def send_periodically(websocket):
     data_1 = {
@@ -137,6 +158,10 @@ async def send_periodically(websocket):
     }
     while True:
         await asyncio.sleep(0.5)
+        # Send latest values to backend (no DB needed). Frontend reads `/micro/live/...`.
+        # Post full envelope; backend will normalize keys from `data_1["data"]`.
+        post_json(SOLAR_URL, data_1)
+        post_json(GENSET_URL, data_1)
         await websocket.send(json.dumps(data_1))
         print("Sent message")
         print(data_1)

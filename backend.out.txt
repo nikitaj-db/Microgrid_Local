@@ -1,0 +1,2 @@
+Server Running on port: http://localhost:5002
+Failed to sync db: 

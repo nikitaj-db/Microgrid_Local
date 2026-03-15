@@ -21,7 +21,7 @@ import "./App.css";
 // Create a separate component to access useLocation inside Router
 const AppContent = () => {
   const location = useLocation();
-  const BaseUrl = "http://localhost:5002/micro";
+  const BaseUrl = import.meta.env.VITE_API_BASE || "/micro";
 
   return (
     <div className="flex h-screen custom-body">

@@ -2,9 +2,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
+import KeyValueTable from "../Components/KeyValueTable";
+import MetricLineChart from "../Components/MetricLineChart";
+import { demoSolarLive, makeHourlySeries } from "../utils/demoData";
 
 const Solar = ({ BaseUrl }) => {
-  const [data, setData] = useState({});
+  const [data, setData] = useState({ solar: {} });
   const [alertsData, setAlertsData] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
   const [shutdownCount, setShutdownCount] = useState(0);
@@ -25,12 +28,13 @@ const Solar = ({ BaseUrl }) => {
     let interval = null;
     const fetchPowerData = async () => {
       try {
-        const response = await fetch(`${BaseUrl}/solar/excel`);
+        const response = await fetch(`${BaseUrl}/live/solar/excel`);
         const result = await response.json();
         //console.log(result)
-        setChartData(result);
+        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries());
       } catch (error) {
         console.error("Error fetching power data:", error);
+        setChartData(makeHourlySeries());
       }
     };
 
@@ -56,16 +60,18 @@ const Solar = ({ BaseUrl }) => {
 
   const fetchSolar = async () => {
     try {
-      const response = await fetch(`${BaseUrl}/solar`);
+      const response = await fetch(`${BaseUrl}/live/solar`);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      const data = await response.json();
-      const sortedData = data.sort((a, b) => a.id - b.id);
-      setData(sortedData[sortedData.length - 1]);
+      const payload = await response.json();
+      const latest = payload?.solar || {};
+      const hasAny = latest && typeof latest === "object" && Object.keys(latest).length > 0;
+      setData({ solar: hasAny ? latest : demoSolarLive });
       setLoading(false);
     } catch (error) {
       console.error("Fetch Error:", error);
+      setData({ solar: demoSolarLive });
       setLoading(false);
     }
     try {
@@ -375,7 +381,8 @@ const Solar = ({ BaseUrl }) => {
     return `${formattedHour} ${ampm}`;
   };
 
-  const utilisation_factor = !loading && (data.operating_hours / 1000) * 100;
+  const utilisation_factor =
+    !loading && ((Number(data.solar?.operating_hours) || 0) / 1000) * 100;
   const total_daily_kwh =
     !loading && chartData.reduce((sum, row) => sum + row.kwh_reading, 0);
 
@@ -419,12 +426,12 @@ const Solar = ({ BaseUrl }) => {
                     Status
                   </p>
                   <p className="text-sm xl:text-base m-0">
-                    {data.voltagel_phase1 > 200 &&
-                    data.voltagel_phase2 > 200 &&
-                    data.voltagel_phase3 > 200 &&
-                    data.kw_phase1 >= 1 &&
-                    data.kw_phase2 >= 1 &&
-                    data.kw_phase3 >= 1 ? (
+                    {Number(data.solar?.voltagel_phase1) > 200 &&
+                    Number(data.solar?.voltagel_phase2) > 200 &&
+                    Number(data.solar?.voltagel_phase3) > 200 &&
+                    Number(data.solar?.kw_phase1) >= 1 &&
+                    Number(data.solar?.kw_phase2) >= 1 &&
+                    Number(data.solar?.kw_phase3) >= 1 ? (
                       <div className="flex items-center gap-2">
                         <div className="bg-[#30F679] rounded-full w-4 h-4"></div>
                         <div className="text-[#30F679]">Active</div>
@@ -451,7 +458,7 @@ const Solar = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="operating-hours"
                 >
-                  {data.operating_hours} hrs
+                  {data.solar?.operating_hours} hrs
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -462,7 +469,7 @@ const Solar = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-generation"
                 >
-                  {data.kwh} kWh
+                  {data.solar?.kwh} kWh
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -473,7 +480,7 @@ const Solar = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-utilisation"
                 >
-                  {data.kwh} kWh
+                  {data.solar?.kwh} kWh
                 </p>
               </div>
               <div className="bg-[#051E1C] rounded-lg flex flex-col items-center justify-center">
@@ -484,7 +491,7 @@ const Solar = ({ BaseUrl }) => {
                   className="text-lg xl:text-xl font-semibold text-[#F3E5DE] pt-2"
                   id="total-savings"
                 >
-                  INR {data.kwh * config.solar_cost}
+                  INR {Number(data.solar?.kwh || 0) * Number(config.solar_cost || 0)}
                 </p>
               </div>
             </div>
@@ -524,7 +531,9 @@ const Solar = ({ BaseUrl }) => {
                       id="power-generated"
                       alt="image"
                     >
-                      {(Number(data?.power_generated_yesterday) || 0).toFixed(
+                      {(
+                        Number(data.solar?.power_generated_yesterday) || 0
+                      ).toFixed(
                         2
                       )}
                     </h6>
@@ -541,7 +550,7 @@ const Solar = ({ BaseUrl }) => {
                       id="hours"
                       alt="image"
                     >
-                      {data.avg_hours_operated ? data.avg_hours_operated : 0}
+                      {data.solar?.avg_hours_operated ? data.solar?.avg_hours_operated : 0}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -574,7 +583,7 @@ const Solar = ({ BaseUrl }) => {
                       id="power"
                       alt="image"
                     >
-                      {data.power_factor ? data.power_factor : 0}
+                      {data.solar?.power_factor ? data.solar?.power_factor : 0}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -592,7 +601,7 @@ const Solar = ({ BaseUrl }) => {
                       id="frequency"
                       alt="image"
                     >
-                      {data.frequency ? data.frequency : 0}
+                      {data.solar?.frequency ? data.solar?.frequency : 0}
                     </h6>
                   </div>
                   <p className="text-sm xl:text-base text-[#AFB2B2] text-start">
@@ -607,12 +616,12 @@ const Solar = ({ BaseUrl }) => {
                       id="breakerstatus"
                       alt="image"
                     >
-                      {data.voltagel_phase1 > 200 &&
-                      data.voltagel_phase2 > 200 &&
-                      data.voltagel_phase3 > 200 &&
-                      data.kw_phase1 >= 1 &&
-                      data.kw_phase2 >= 1 &&
-                      data.kw_phase3 >= 1
+                      {Number(data.solar?.voltagel_phase1) > 200 &&
+                      Number(data.solar?.voltagel_phase2) > 200 &&
+                      Number(data.solar?.voltagel_phase3) > 200 &&
+                      Number(data.solar?.kw_phase1) >= 1 &&
+                      Number(data.solar?.kw_phase2) >= 1 &&
+                      Number(data.solar?.kw_phase3) >= 1
                         ? "On"
                         : "OFF"}
                     </h6>
@@ -650,19 +659,19 @@ const Solar = ({ BaseUrl }) => {
                         id="voltage-l-l-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase1}
+                        {data.solar?.voltagel_phase1}
                       </td>
                       <td
                         id="voltage-l-n-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase1}
+                        {data.solar?.voltagen_phase1}
                       </td>
                       <td
                         id="current-phase1"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.current_phase1}
+                        {data.solar?.current_phase1}
                       </td>
                     </tr>
                     <tr>
@@ -673,19 +682,19 @@ const Solar = ({ BaseUrl }) => {
                         id="voltage-l-l-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase2}
+                        {data.solar?.voltagel_phase2}
                       </td>
                       <td
                         id="voltage-l-n-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase2}
+                        {data.solar?.voltagen_phase2}
                       </td>
                       <td
                         id="current-phase2"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.current_phase2}
+                        {data.solar?.current_phase2}
                       </td>
                     </tr>
                     <tr>
@@ -696,19 +705,19 @@ const Solar = ({ BaseUrl }) => {
                         id="voltage-l-l-phase3"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagel_phase3}
+                        {data.solar?.voltagel_phase3}
                       </td>
                       <td
                         id="voltage-l-n-phase3"
                         className="text-center p-3 text-sm xl:text-base"
                       >
-                        {data.voltagen_phase3}
+                        {data.solar?.voltagen_phase3}
                       </td>
                       <td
                         id="current-phase3"
                         className="text-center p-3 rounded-br-lg text-sm xl:text-base"
                       >
-                        {data.current_phase3}
+                        {data.solar?.current_phase3}
                       </td>
                     </tr>
                   </tbody>
@@ -858,23 +867,37 @@ const Solar = ({ BaseUrl }) => {
                     <tr className="text-sm xl:text-base">
                       <td className="p-4 rounded-bl-lg">kW</td>
                       <td id="kW-phase1" className="p-2">
-                        {data.kw_phase1}
+                        {data.solar?.kw_phase1}
                       </td>
                       <td id="kW-phase2" className="p-2">
-                        {data.kw_phase2}
+                        {data.solar?.kw_phase2}
                       </td>
                       <td id="kW-phase3" className="p-2 rounded-br-lg">
-                        {data.kw_phase3}
+                        {data.solar?.kw_phase3}
                       </td>
                     </tr>
                     {/* <tr className='text-sm xl:text-base'>
                                     <td className="p-3 rounded-bl-lg">kVA</td>
-                                    <td id="kVA-phase1" className="p-2">{data.kva_phase1}</td>
-                                    <td id="kVA-phase2" className="p-2">{data.kva_phase2}</td>
-                                    <td id="kVA-phase3" className="p-2 rounded-br-lg">{data.kva_phase3}</td>
+                                    <td id="kVA-phase1" className="p-2">{data.solar?.kva_phase1}</td>
+                                    <td id="kVA-phase2" className="p-2">{data.solar?.kva_phase2}</td>
+                                    <td id="kVA-phase3" className="p-2 rounded-br-lg">{data.solar?.kva_phase3}</td>
                                 </tr> */}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4 mb-7">
+                <KeyValueTable
+                  title="Solar (All Live Values)"
+                  data={data.solar}
+                  excludeKeys={[]}
+                />
+                <MetricLineChart
+                  title="Solar (Trends)"
+                  series={chartData}
+                  defaultMetric="unit_generation"
+                  xKey="hour"
+                />
               </div>
             </div>
           </div>

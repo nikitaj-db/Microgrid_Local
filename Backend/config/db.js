@@ -1,12 +1,17 @@
 const { Sequelize, DataTypes } = require("sequelize");
 const dotenv = require("dotenv").config();
 
+const requiredEnv = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST"];
+const missingEnv = requiredEnv.filter((k) => !process.env[k]);
+const dbConfigured = missingEnv.length === 0;
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
+  process.env.DB_NAME || "",
+  process.env.DB_USER || "",
+  process.env.DB_PASSWORD || "",
   {
-    host: process.env.DB_HOST,
+    host: process.env.DB_HOST || "localhost",
+    port: Number(process.env.DB_PORT || 5432),
     dialect: "postgres",
     timezone: "+05:30", // IST timezone
     dialectOptions: {
@@ -50,14 +55,24 @@ db.genset_controller = require("../src/genset/genset_models_controller")(
 db.records = require("../src/records/records_models")(sequelize, DataTypes);
 db.alert = require("../src/alert/alert_models")(sequelize, DataTypes);
 
-db.sequelize
-  .sync({ force: false })
-  .then(() => {
-    console.log("Synced db.");
-  })
-  .catch((err) => {
-    console.log("Failed to sync db: " + err.message);
-  });
+if (!dbConfigured) {
+  console.warn(
+    `DB not configured (missing ${missingEnv.join(
+      ", "
+    )}). Skipping sequelize.sync(); DB-backed routes may fail.`
+  );
+} else {
+  db.sequelize
+    .sync({ force: false })
+    .then(() => {
+      console.log("Synced db.");
+    })
+    .catch((err) => {
+      const msg = err?.message || String(err);
+      console.log("Failed to sync db: " + msg);
+      if (err?.stack) console.log(err.stack);
+    });
+}
 
 module.exports = db;
 

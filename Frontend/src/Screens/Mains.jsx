@@ -2,6 +2,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
+import KeyValueTable from "../Components/KeyValueTable";
+import MetricLineChart from "../Components/MetricLineChart";
+import { demoMainsLatest, makeHourlySeries } from "../utils/demoData";
 
 const Mains = ({ BaseUrl }) => {
   const [data, setData] = useState({});
@@ -20,9 +23,10 @@ const Mains = ({ BaseUrl }) => {
         const response = await fetch(`${BaseUrl}/mains/excel`);
         const result = await response.json();
         //  console.log(result)
-        setChartData(result);
+        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 6, baseKwh: 600, baseKwTotal: 12 }));
       } catch (error) {
         console.error("Error fetching power data:", error);
+        setChartData(makeHourlySeries({ baseUnit: 6, baseKwh: 600, baseKwTotal: 12 }));
       }
     };
 
@@ -55,10 +59,13 @@ const Mains = ({ BaseUrl }) => {
       const data = await response.json();
       const sortedData = data.sort((a, b) => a.id - b.id);
       // console.log(sortedData)
-      setData(sortedData[sortedData.length - 1]);
+      const latest = sortedData[sortedData.length - 1];
+      const hasAny = latest && typeof latest === "object" && Object.keys(latest).length > 0;
+      setData(hasAny ? latest : demoMainsLatest);
       setLoading(false);
     } catch (error) {
       console.error("Fetch Error:", error);
+      setData(demoMainsLatest);
       setLoading(false);
     }
     try {
@@ -851,6 +858,16 @@ const Mains = ({ BaseUrl }) => {
                                     </tr> */}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4 mb-7">
+                <KeyValueTable title="Mains (All Values)" data={data} excludeKeys={[]} />
+                <MetricLineChart
+                  title="Mains (Trends)"
+                  series={chartData}
+                  defaultMetric="unit_generation"
+                  xKey="hour"
+                />
               </div>
             </div>
           </div>
