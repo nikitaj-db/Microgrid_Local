@@ -5,6 +5,92 @@ const state = {
   genset_series: [],
 };
 
+function defaultDevicePayload(device) {
+  const base = {
+    breaker_status: "OFF",
+    kwh: 0,
+    unit_generated: 0,
+    frequency: 0,
+    power_factor: 0,
+    operating_hours: 0,
+    hours_operated: 0,
+    voltagel_phase1: 0,
+    voltagel_phase2: 0,
+    voltagel_phase3: 0,
+    voltagen_phase1: 0,
+    voltagen_phase2: 0,
+    voltagen_phase3: 0,
+    current_phase1: 0,
+    current_phase2: 0,
+    current_phase3: 0,
+    kw_phase1: 0,
+    kw_phase2: 0,
+    kw_phase3: 0,
+    updated_at: null,
+    placeholder: true,
+  };
+
+  if (device === "genset") {
+    return {
+      ...base,
+      fuel_level: 0,
+      coolant_temp: 0,
+      oil_pressure: 0,
+      battery_charged: 0,
+    };
+  }
+
+  return base;
+}
+
+function defaultSeriesPoint(device, date) {
+  const hour = date.getHours();
+  const ts = date.toISOString();
+  const base = {
+    hour,
+    ts,
+    kwh_reading: 0,
+    unit_generation: 0,
+    kw_total: 0,
+    kw_phase1: 0,
+    kw_phase2: 0,
+    kw_phase3: 0,
+    frequency: 0,
+    power_factor: 0,
+    operating_hours: 0,
+    voltagel_phase1: 0,
+    voltagel_phase2: 0,
+    voltagel_phase3: 0,
+    voltagen_phase1: 0,
+    voltagen_phase2: 0,
+    voltagen_phase3: 0,
+    current_phase1: 0,
+    current_phase2: 0,
+    current_phase3: 0,
+  };
+
+  if (device === "genset") {
+    return {
+      ...base,
+      fuel_level: 0,
+      coolant_temp: 0,
+      oil_pressure: 0,
+      battery_charged: 0,
+    };
+  }
+
+  return base;
+}
+
+function defaultHourlySeries(device, points = 24) {
+  const now = new Date();
+  const out = [];
+  for (let i = points - 1; i >= 0; i -= 1) {
+    out.push(defaultSeriesPoint(device, new Date(now.getTime() - i * 60 * 60 * 1000)));
+  }
+  return out;
+}
+
 function normalizeNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -174,12 +260,15 @@ function update(device, payload) {
 
 function get(device) {
   if (device !== "solar" && device !== "genset") return null;
-  return state[device];
+  return state[device] ?? defaultDevicePayload(device);
 }
 
 function series(device) {
   if (device !== "solar" && device !== "genset") return [];
-  return state[device === "solar" ? "solar_series" : "genset_series"];
+  const key = device === "solar" ? "solar_series" : "genset_series";
+  const series = state[key];
+  if (Array.isArray(series) && series.length) return series;
+  return defaultHourlySeries(device, 24);
 }
 
 module.exports = { update, get, series };
