@@ -12,6 +12,7 @@ import {
 import KeyValueTable from "../Components/KeyValueTable";
 import MetricLineChart from "../Components/MetricLineChart";
 import { demoOverview, makeHourlySeries } from "../utils/demoData";
+import { FORCE_ZERO_GRAPHS, zeroSeries } from "../utils/graphOverrides";
 
 const Overview = ({ BaseUrl }) => {
   const myDatavizRef = useRef(null);
@@ -50,10 +51,15 @@ const Overview = ({ BaseUrl }) => {
         });
         const result = await response.json();
         // console.log(result)
-        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 8, baseKwh: 200, baseKwTotal: 22 }));
+        const next =
+          Array.isArray(result) && result.length
+            ? result
+            : makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       } catch (error) {
         console.error("Error fetching power data:", error);
-        setChartData(makeHourlySeries({ baseUnit: 8, baseKwh: 200, baseKwTotal: 22 }));
+        const next = makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       }
     };
 
@@ -107,9 +113,9 @@ const Overview = ({ BaseUrl }) => {
   }, []);
 
   const datas = !loading && {
-    solar: alldata.solar.avg_total_generation,
-    genset: alldata.genset.avg_total_generation,
-    mains: alldata.mains.avg_total_generation,
+    solar: FORCE_ZERO_GRAPHS ? 0 : alldata.solar.avg_total_generation,
+    genset: FORCE_ZERO_GRAPHS ? 0 : alldata.genset.avg_total_generation,
+    mains: FORCE_ZERO_GRAPHS ? 0 : alldata.mains.avg_total_generation,
   };
   const chartdata = calculatePercentages(datas);
   var current = !loading && calculateAverageCurrent(alldata);
@@ -198,11 +204,19 @@ const Overview = ({ BaseUrl }) => {
       .domain([pastHour, currentHour])
       .range([0, width]);
 
+    const rawMax = d3.max(data, (d) => +d.kwh_reading);
+    const yMax = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1;
+
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => +d.kwh_reading)])
+      .domain([0, yMax])
       .nice()
       .range([height, 0]);
+
+    const format2 = (value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toFixed(2) : "0.00";
+    };
 
     // Define a clip path to restrict the curve and area to the chart area
     svg
@@ -281,7 +295,7 @@ const Overview = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Add shadow beneath the curve
@@ -299,7 +313,7 @@ const Overview = ({ BaseUrl }) => {
           .x((d) => x(d.hour))
           .y0(height)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Tooltip setup
@@ -331,7 +345,7 @@ const Overview = ({ BaseUrl }) => {
             .style("opacity", 0.9)
             .html(
               `Hour: ${formatAMPM(dClosest.hour)}, Power: ${
-                dClosest.kwh_reading
+                format2(dClosest.kwh_reading)
               }`
             )
             .style("left", `${event.pageX + 10}px`)
@@ -411,7 +425,7 @@ const Overview = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
       svg.select(".shadow").attr(
@@ -421,7 +435,7 @@ const Overview = ({ BaseUrl }) => {
           .x((d) => x(d.hour))
           .y0(newHeight)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
     }
 
@@ -846,7 +860,7 @@ const Overview = ({ BaseUrl }) => {
           <p className="mt-2 text-white text-base xl:text-lg font-light mb-5">
             Total Daily Consumption:
             <span className="bg-[#0821FF] text-sm xl:text-base rounded-full px-3 py-1 ml-2 inline-block font-extralight">
-              {total_daily_kwh} kWh
+              {(Number(total_daily_kwh) || 0).toFixed(2)} kWh
             </span>
           </p>
           <div className="mt-4 h-full">

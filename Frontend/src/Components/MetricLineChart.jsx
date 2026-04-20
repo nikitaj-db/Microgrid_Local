@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Chart from "chart.js/auto";
+import { FORCE_ZERO_GRAPHS } from "../utils/graphOverrides";
 
 function isPlottableNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
@@ -28,6 +29,15 @@ export default function MetricLineChart({
 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }),
+    []
+  );
+
+  const formatNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? numberFormatter.format(num) : "";
+  };
 
   const derivedMetrics = useMemo(() => {
     if (Array.isArray(metrics) && metrics.length) return metrics;
@@ -59,6 +69,18 @@ export default function MetricLineChart({
     return series.map((p) => (isPlottableNumber(p?.[metric]) ? p[metric] : null));
   }, [series, metric]);
 
+  const plottedValues = useMemo(() => {
+    if (!FORCE_ZERO_GRAPHS) return values;
+    return labels.map(() => 0);
+  }, [labels, values]);
+
+  const ySuggestedMax = useMemo(() => {
+    const nums = plottedValues.filter(isPlottableNumber);
+    if (!nums.length) return 1;
+    const max = Math.max(...nums);
+    return max > 0 ? max : 1;
+  }, [plottedValues]);
+
   useEffect(() => {
     if (!canvasRef.current) return;
     if (chartRef.current) chartRef.current.destroy();
@@ -70,11 +92,11 @@ export default function MetricLineChart({
         datasets: [
           {
             label: metric || "metric",
-            data: values,
+            data: plottedValues,
             borderColor: "#68BFB6",
             backgroundColor: "rgba(104, 191, 182, 0.12)",
             pointRadius: 1,
-            tension: 0.25,
+            tension: 0,
             spanGaps: false,
           },
         ],
@@ -84,7 +106,12 @@ export default function MetricLineChart({
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: true },
+          tooltip: {
+            enabled: true,
+            callbacks: {
+              label: (ctx) => formatNumber(ctx.parsed?.y),
+            },
+          },
         },
         scales: {
           x: {
@@ -92,7 +119,12 @@ export default function MetricLineChart({
             grid: { color: "rgba(255,255,255,0.06)" },
           },
           y: {
-            ticks: { color: "#CACCCC" },
+            min: 0,
+            suggestedMax: ySuggestedMax,
+            ticks: {
+              color: "#CACCCC",
+              callback: (v) => formatNumber(v),
+            },
             grid: { color: "rgba(255,255,255,0.06)" },
           },
         },
@@ -103,7 +135,7 @@ export default function MetricLineChart({
       if (chartRef.current) chartRef.current.destroy();
       chartRef.current = null;
     };
-  }, [labels, values, metric]);
+  }, [labels, plottedValues, metric, ySuggestedMax]);
 
   return (
     <div className="bg-[#030F0E] rounded-lg p-3">
@@ -132,4 +164,3 @@ export default function MetricLineChart({
     </div>
   );
 }
-

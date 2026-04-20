@@ -6,6 +6,7 @@ import * as d3 from "d3";
 import KeyValueTable from "../Components/KeyValueTable";
 import MetricLineChart from "../Components/MetricLineChart";
 import { demoGensetLive, makeHourlySeries } from "../utils/demoData";
+import { FORCE_ZERO_GRAPHS, zeroSeries } from "../utils/graphOverrides";
 
 const Genset = ({ BaseUrl }) => {
   const [data, setData] = useState({ genset: {} });
@@ -33,10 +34,12 @@ const Genset = ({ BaseUrl }) => {
         const response = await fetch(`${BaseUrl}/live/genset/excel`);
         const result = await response.json();
         //  console.log(result)
-        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 4, baseKwh: 300, baseKwTotal: 18 }));
+        const next = Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       } catch (error) {
         console.error("Error fetching power data:", error);
-        setChartData(makeHourlySeries({ baseUnit: 4, baseKwh: 300, baseKwTotal: 18 }));
+        const next = makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       }
     };
 
@@ -174,11 +177,19 @@ const Genset = ({ BaseUrl }) => {
       ])
       .range([0, width]);
 
+    const rawMax = d3.max(filteredData, (d) => +d.kwh_reading);
+    const yMax = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1;
+
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(filteredData, (d) => +d.kwh_reading)])
+      .domain([0, yMax])
       .nice()
       .range([height, 0]);
+
+    const format2 = (value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toFixed(2) : "0.00";
+    };
 
     // Add axes
     svg
@@ -255,7 +266,7 @@ const Genset = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour >= pastHour ? d.hour : d.hour + 24))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Add the shadow (area beneath curve)
@@ -273,7 +284,7 @@ const Genset = ({ BaseUrl }) => {
           .x((d) => x(d.hour >= pastHour ? d.hour : d.hour + 24))
           .y0(height)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Create tooltip
@@ -299,7 +310,9 @@ const Genset = ({ BaseUrl }) => {
         tooltip.transition().duration(200).style("opacity", 0.9);
         tooltip
           .html(
-            `Hour: ${formatAMPM(dHover.hour)}, Power: ${dHover.kwh_reading}`
+            `Hour: ${formatAMPM(dHover.hour)}, Power: ${format2(
+              dHover.kwh_reading
+            )}`
           )
           .style("left", event.pageX + "px")
           .style("top", event.pageY - 28 + "px");
@@ -374,7 +387,7 @@ const Genset = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour >= pastHour ? d.hour : d.hour + 24))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
       svg.select(".shadow").attr(
@@ -384,7 +397,7 @@ const Genset = ({ BaseUrl }) => {
           .x((d) => x(d.hour >= pastHour ? d.hour : d.hour + 24))
           .y0(newHeight)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
     }
 

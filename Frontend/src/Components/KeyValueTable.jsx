@@ -4,7 +4,7 @@ function formatValue(value) {
   if (value === null || value === undefined) return "-";
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return "-";
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(
       value
     );
   }
@@ -74,4 +74,3 @@ export default function KeyValueTable({
     </div>
   );
 }
-

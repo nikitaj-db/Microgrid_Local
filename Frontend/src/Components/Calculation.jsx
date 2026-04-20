@@ -6,6 +6,12 @@ export function calculatePercentages(data) {
   const totalGeneration = solarGeneration + gensetGeneration + mainsGeneration;
 
   // console.log(totalGeneration)
+  if (!Number.isFinite(totalGeneration) || totalGeneration <= 0) {
+    return {
+      labels: ["Solar", "Mains", "Genset"],
+      values: [0, 0, 0],
+    };
+  }
 
   let percentages = [
     (solarGeneration / totalGeneration) * 100 || 0,

@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import KeyValueTable from "../Components/KeyValueTable";
 import MetricLineChart from "../Components/MetricLineChart";
 import { demoMainsLatest, makeHourlySeries } from "../utils/demoData";
+import { FORCE_ZERO_GRAPHS, zeroSeries } from "../utils/graphOverrides";
 
 const Mains = ({ BaseUrl }) => {
   const [data, setData] = useState({});
@@ -23,10 +24,15 @@ const Mains = ({ BaseUrl }) => {
         const response = await fetch(`${BaseUrl}/mains/excel`);
         const result = await response.json();
         //  console.log(result)
-        setChartData(Array.isArray(result) && result.length ? result : makeHourlySeries({ baseUnit: 6, baseKwh: 600, baseKwTotal: 12 }));
+        const next =
+          Array.isArray(result) && result.length
+            ? result
+            : makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       } catch (error) {
         console.error("Error fetching power data:", error);
-        setChartData(makeHourlySeries({ baseUnit: 6, baseKwh: 600, baseKwTotal: 12 }));
+        const next = makeHourlySeries({ baseUnit: 0, baseKwh: 0, baseKwTotal: 0 });
+        setChartData(FORCE_ZERO_GRAPHS ? zeroSeries(next) : next);
       }
     };
 
@@ -151,11 +157,19 @@ const Mains = ({ BaseUrl }) => {
       .scaleLinear()
       .domain([pastHour, currentHour])
       .range([0, width]);
+
+    const rawMax = d3.max(data, (d) => +d.kwh_reading);
+    const yMax = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1;
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => +d.kwh_reading)])
+      .domain([0, yMax])
       .nice()
       .range([height, 0]); // Note: correct order for y-scale
+
+    const format2 = (value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num.toFixed(2) : "0.00";
+    };
 
     // Add axes
     svg
@@ -233,7 +247,7 @@ const Mains = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Add the shadow (area beneath curve)
@@ -251,7 +265,7 @@ const Mains = ({ BaseUrl }) => {
           .x((d) => x(d.hour))
           .y0(height) // Start from the bottom (X-axis line)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
     // Create tooltip
@@ -277,7 +291,9 @@ const Mains = ({ BaseUrl }) => {
         tooltip.transition().duration(200).style("opacity", 0.9);
         tooltip
           .html(
-            `Hour: ${formatAMPM(dHover.hour)}, Power: ${dHover.kwh_reading}`
+            `Hour: ${formatAMPM(dHover.hour)}, Power: ${format2(
+              dHover.kwh_reading
+            )}`
           )
           .style("left", event.pageX + "px")
           .style("top", event.pageY - 28 + "px");
@@ -346,7 +362,7 @@ const Mains = ({ BaseUrl }) => {
           .line()
           .x((d) => x(d.hour))
           .y((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
 
       svg.select(".shadow").attr(
@@ -356,7 +372,7 @@ const Mains = ({ BaseUrl }) => {
           .x((d) => x(d.hour))
           .y0(newHeight)
           .y1((d) => y(+d.kwh_reading))
-          .curve(d3.curveBasis)
+          .curve(d3.curveLinear)
       );
     }
 
